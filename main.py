@@ -125,10 +125,6 @@ if __name__ == "__main__":
 
     file_Name = 'berlin11_modified.tsp'
 
-    # liste,diger = parse_data(file_Name)
-    # print(liste)
-    # print(diger)
-
     data = Parser(file_path = file_Name)
 
     for d in data.city_data:
