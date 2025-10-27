@@ -1,5 +1,6 @@
 import pandas as pd
 import math
+import numpy as np
 
 class City:
 
@@ -21,12 +22,6 @@ class City:
         self.distances.append((compare_city.id,distance))
 
         return distance
-
-    def convert_frame(self):
-        
-        df = pd.DataFrame([{"FC": self.id, "SC": c[0], "DISTANCE": c[1]} for c in self.distances])
-        df.drop_duplicates(inplace = True)
-        return df
 
 class Parser:
 
@@ -98,8 +93,7 @@ class Parser:
         self.distance_df = pd.DataFrame(temp_distances,columns=["FCID","SCID","Distance"])
         return self.distance_df
     
-
-
+# Basic parser without OOP.
 def parse_data(file_name):
 
     dataset_info = {}
@@ -145,21 +139,37 @@ def parse_data(file_name):
 
     return dataset_info,city_data_pd
 
+def test_parsing(data):
+
+    cities_test = [_.id for _ in data.city_data]
+    print(f"Original: {cities_test}\n------------------" )
+
+    for i in range(1,len(cities_test) + 1):
+        random_sol = np.random.permutation(cities_test)
+        
+        if len(set(random_sol)) == len(cities_test):
+            print(f"Test solution: {random_sol}")
+            print(f"{i}. Solution, Parsing successful.")
+    
+
+        else:
+            print("Parsing failed.")
 
 if __name__ == "__main__":
 
+    pd.set_option('display.max_rows', None)
     file_b11 = 'berlin11_modified.tsp'
     file_b52 = 'berlin52.tsp'
-    pd.set_option('display.max_rows', None)
-
+    
     data = Parser(file_path = file_b52)
 
     dataset_info = data.dataset_info
     distances = data.city_dataframe()
     
-    print(distances)
+    # The First Task: Parse and convert the data into a DataFrame and test it.
 
+    # print(dataset_info)
+    # print(distances)
+    # test_parsing(data)
 
-    
-   
-    
+    # ------------------------------------------------------------------------
