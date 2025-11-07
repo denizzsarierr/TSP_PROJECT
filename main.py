@@ -32,6 +32,7 @@ class Parser:
         self.path = file_path
         self.distance_df = []
         self._convert_frame()
+        self.solution = []
         # Call the parsing and converting function when the object is created.
 
 
@@ -93,51 +94,79 @@ class Parser:
         self.distance_df = pd.DataFrame(temp_distances,columns=["FCID","SCID","Distance"])
         return self.distance_df
     
-# Basic parser without OOP.
-def parse_data(file_name):
+    def rand_solution(self):
 
-    dataset_info = {}
-    city_data = []
+        cities_test = [city.id for city in data.city_data]
 
-
-    is_city_section = False
-
-    with open(file_name,"r") as file:
-
-        for line in file:
-
-            line = line.strip()
+        for _ in range(1,len(cities_test) + 1):
+            random_sol = np.random.permutation(cities_test).tolist()
             
-            # Check if it is end of the dataset.
-            if line.startswith('EOF'):
-                break
-
-            # Check if it is alreay in the city section.
-            if line.startswith('NODE_COORD_SECTION'):
-
-                is_city_section = True
-                continue
+            if len(set(random_sol)) != len(cities_test):
+                
+                raise ValueError("Parsing failed.")
             
-            # Parsing the informations that are not releated to city.
-            if not is_city_section:
+            self.solution.append(random_sol)
+        
+        print('Solution, Parsing successful.')
+        return self.solution
+    
 
-                variable,info = line.split(":")
-                dataset_info[variable] = info
-                continue
+class Solution:
+    
+    def __init__(self,data):
 
-            # Parsing the coordinate and id of the city.
-            details = line.split()
+        self.solution_list = []
+        self.data = data
 
-            id = details[0]
-            x = details[1]
-            y = details[2]
+
+    def rand_solution(self):
+        
+        cities_solved = [c.id for c in self.data.city_data]
+
+        for _ in range(1,len(cities_solved) + 1):
+            random_sol = np.random.permutation(cities_solved).tolist()
             
-            city_data.append((id,x,y))
+            if len(set(random_sol)) != len(cities_solved):
+                
+                raise ValueError("Parsing failed.")
+            
+            self.solution_list.append(random_sol)
+        
+        return self.solution_list
+    
+    def calculate_fitness(self,solution):
+
+        total_distance = 0
+        distances_df = self.data.distance_df
+        
+
+        for i in range(len(solution)):
+
+            distance = 0
+            
+            if i == len(solution) - 1:
+
+                current = solution[i]
+                next = solution[0]
+
+            else:
+                current = solution[i]
+                next = solution[i + 1]
+
+            distance = distances_df.loc[((distances_df["FCID"] == current) & (distances_df["SCID"] == next)) |
+                                    ((distances_df["FCID"] == next) & (distances_df["SCID"] == current)),
+                                     "Distance" ].values[0]
+
+            total_distance += distance
+
+        self.info(solution=solution)
+        return total_distance
 
 
-    city_data_pd = pd.DataFrame(city_data,columns=["id","x_coordinate","y_coordinate"])
+    def info(self,solution):
+        
+        print("Route:", " -> ".join(str(c) for c in solution))
 
-    return dataset_info,city_data_pd
 
 def test_parsing(data):
 
@@ -162,14 +191,28 @@ if __name__ == "__main__":
     file_b52 = 'berlin52.tsp'
     
     data = Parser(file_path = file_b52)
-
     dataset_info = data.dataset_info
     distances = data.city_dataframe()
     
+    # print(data.city_data)
+    # random_solution = data.rand_solution()
+    # print(random_solution)
+    # data.rand_solution()
     # The First Task: Parse and convert the data into a DataFrame and test it.
-
+    # res = distances.loc[(distances['FCID'] == 1) & (distances['SCID'] == 2)]
+    # print(res)
     # print(dataset_info)
-    # print(distances)
+    # print(distances.head(10))
     # test_parsing(data)
-
     # ------------------------------------------------------------------------
+
+    # print(distances)
+    solution1 = Solution(data)
+    solution_list = solution1.solution_list
+    print(solution1.rand_solution())
+
+
+    for i in solution_list:
+
+        total = solution1.calculate_fitness(i)
+        print(total)
