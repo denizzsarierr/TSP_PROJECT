@@ -95,36 +95,21 @@ class Parser:
         self.distance_df = pd.DataFrame(temp_distances,columns=["FCID","SCID","Distance"])
         return self.distance_df
     
-    def rand_solution(self):
-
-        cities_test = [city.id for city in data.city_data]
-
-        for _ in range(1,len(cities_test) + 1):
-            random_sol = np.random.permutation(cities_test).tolist()
-            
-            if len(set(random_sol)) != len(cities_test):
-                
-                raise ValueError("Parsing failed.")
-            
-            self.solution.append(random_sol)
-        
-        print('Solution, Parsing successful.')
-        return self.solution
-    
-
 class Solution:
     
     def __init__(self,data):
 
         self.solution_list = []
         self.data = data
+        self.results = {}
 
 
     def rand_solution(self):
         
         cities_solved = [c.id for c in self.data.city_data]
+        
+        for _ in range(100):
 
-        for _ in range(1,len(cities_solved) + 1):
             random_sol = np.random.permutation(cities_solved).tolist()
             
             if len(set(random_sol)) != len(cities_solved):
@@ -132,6 +117,7 @@ class Solution:
                 raise ValueError("Parsing failed.")
             
             self.solution_list.append(random_sol)
+
         
         return self.solution_list
     
@@ -161,11 +147,12 @@ class Solution:
             total_distance += distance
 
         self.info(solution=solution)
+        
         return total_distance
 
     def info(self,solution):
         
-        return "Route:", " -> ".join(str(c) for c in solution)
+        return "Route:" + " -> ".join(str(c) for c in solution)
 
     # AI GENERATED MATPLOTLIB
     # def plot_solution(self, solution):
@@ -203,8 +190,6 @@ class Greedy:
         next_city_id = 0
         visited_cities = [start_point]
         self.route = [start_point]
-        
-
         
         while len(visited_cities) < len(self.data.city_data):
             #print(len(visited_cities))
@@ -249,17 +234,16 @@ class Greedy:
     
     def info(self,solution):
         
-        return "Route:", " -> ".join(str(c) for c in solution)
+        return "Route: " + " -> ".join(str(c) for c in solution)
     
     def greedy_for_each(self):
 
         results = {}
         
-
         for i in data.city_data:
 
             dist,route = self.greedy_solution(i.id)
-            results[i.id] = (dist,route)
+            results[i.id] = (int(dist),route)
             
             print(f"\nStarting city: {i.id}")
             print(self.info(route))
@@ -273,23 +257,6 @@ class Greedy:
 
         return results
 
-
-def test_parsing(data):
-
-    cities_test = [_.id for _ in data.city_data]
-    print(f"Original: {cities_test}\n------------------" )
-
-    for i in range(1,len(cities_test) + 1):
-        random_sol = np.random.permutation(cities_test)
-        
-        if len(set(random_sol)) == len(cities_test):
-            print(f"Test solution: {random_sol}")
-            print(f"{i}. Solution, Parsing successful.")
-    
-
-        else:
-            print("Parsing failed.")
-
 if __name__ == "__main__":
 
     pd.set_option('display.max_rows', None)
@@ -298,36 +265,49 @@ if __name__ == "__main__":
     
     data = Parser(file_path = file_b52)
     dataset_info = data.dataset_info
-    distances = data.city_dataframe()
+    data.city_dataframe()
     
     # print(data.city_data)
-    # random_solution = data.rand_solution()
-    # print(random_solution)
-    # data.rand_solution()
+
     # The First Task: Parse and convert the data into a DataFrame and test it.
-    # res = distances.loc[(distances['FCID'] == 1) & (distances['SCID'] == 2)]
-    # print(res)
-    # print(dataset_info)
-    # print(distances.head(10))
     # test_parsing(data)
+
+    
+
     # ------------------------TASK 2-------------------------------------
 
-    # print(distances)
     solution1 = Solution(data)
-    solution_list = solution1.solution_list
-    # print(solution1.rand_solution())
+    solution_list = solution1.rand_solution()
 
+    random_results = []
 
     for i in solution_list:
-
+        
+        
         total = solution1.calculate_fitness(i)
-        # print(total)
+        random_results.append((i,int(total)))
+        print(solution1.info(i), "Total distance:", total)
         #solution1.plot_solution(i)
 
-    greed = Greedy(data=data)
+    best_random_route , best_random_distance = min(random_results, key=lambda x: x[1]) 
 
-    totaldist, route = greed.greedy_solution(1)
+    greed = Greedy(data=data)
+    greedy_results = greed.greedy_for_each()
     
-    greed.greedy_for_each()
-    #print(greed.route)
-    #print(greed.visited)
+    best_greedy_distance = min(greedy_results.values(), key=lambda x: x[0])[0]
+    best_greedy_route = min(greedy_results.values(), key=lambda x: x[0])[1]
+    
+    if best_random_distance < best_greedy_distance:
+        
+        print(f"Random solution is better than greedy. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
+        print(f"Route: {best_random_route}")
+
+    elif best_random_distance > best_greedy_distance:
+
+        print(f"Greedy solution is better than random. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
+        print(f"Route: {best_greedy_route}")
+    else:
+        print(f"Random and Greedy are equal. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
+        print(f"Routes: Random - {best_random_route}, Greedy - {best_greedy_route}")
+    
+    # ------------------------TASK 2-------------------------------------
