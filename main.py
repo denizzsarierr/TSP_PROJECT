@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 class City:
 
-
     def __init__(self,id,x_coord,y_coord):
         self.id = int(id)
         self.x_coord = float(x_coord)
@@ -36,9 +35,7 @@ class Parser:
         self.solution = []
         # Call the parsing and converting function when the object is created.
 
-
     def _parse_date(self):
-
 
         with open(self.path,"r") as file:
             
@@ -91,7 +88,7 @@ class Parser:
                 if c2.id > c1.id:
                     distance = c1.find_distance(c2)
                     temp_distances.append((c1.id,c2.id,distance))
-
+            
         self.distance_df = pd.DataFrame(temp_distances,columns=["FCID","SCID","Distance"])
         return self.distance_df
     
@@ -102,7 +99,6 @@ class Solution:
         self.solution_list = []
         self.data = data
         self.results = {}
-
 
     def rand_solution(self):
         
@@ -121,14 +117,21 @@ class Solution:
         
         return self.solution_list
     
+    def single_rand_solution(self):
+        
+        cities_solved = [c.id for c in self.data.city_data]
+        
+        random_sol = np.random.permutation(cities_solved).tolist()
+                     
+        return random_sol
+    
     def calculate_fitness(self,solution):
 
         total_distance = 0
         distances_df = self.data.distance_df
         
-
         for i in range(len(solution)):
-
+            
             distance = 0
             
             if i == len(solution) - 1:
@@ -140,9 +143,10 @@ class Solution:
                 current = solution[i]
                 next = solution[i + 1]
 
+
             distance = distances_df.loc[((distances_df["FCID"] == current) & (distances_df["SCID"] == next)) |
-                                    ((distances_df["FCID"] == next) & (distances_df["SCID"] == current)),
-                                     "Distance" ].values[0]
+                                     ((distances_df["FCID"] == next) & (distances_df["SCID"] == current)),
+                                       "Distance" ].values[0]
 
             total_distance += distance
 
@@ -192,9 +196,7 @@ class Greedy:
         self.route = [start_point]
         
         while len(visited_cities) < len(self.data.city_data):
-            #print(len(visited_cities))
-
-            # point_rows = distance_df[distance_df["FCID"] == current_city_id]
+            
             point_rows = distance_df[
             (distance_df["FCID"] == current_city_id) | (distance_df["SCID"] == current_city_id)]
             point_rows = point_rows.sort_values("Distance")
@@ -221,7 +223,6 @@ class Greedy:
             total_distance += best_min            
             current_city_id = int(next_city_id)
         
-
         returning_dist = distance_df.loc[
         ((distance_df["FCID"] == current_city_id) & (distance_df["SCID"] == start_point)) |
         ((distance_df["FCID"] == start_point) & (distance_df["SCID"] == current_city_id)),
@@ -229,7 +230,7 @@ class Greedy:
         ].values[0]
 
         total_distance += returning_dist
-        self.route.append(start_point)
+        
         return total_distance,self.route
     
     def info(self,solution):
@@ -257,6 +258,64 @@ class Greedy:
 
         return results
 
+class Population:
+
+    def __init__(self,data):
+        self.data = data
+        self.population = []
+
+    def create_population(self,individuals,greedies = 0):
+        
+        solution_picker = Solution(self.data)
+
+        if greedies > 0:
+            
+            greedy_picker = Greedy(self.data)
+
+            all_greedy = list(greedy_picker.greedy_for_each().values())
+
+            sorted_greedy_dict = sorted(all_greedy, key=lambda x: x[0])
+
+            greedy_routes = [route for (_, route) in sorted_greedy_dict[:greedies]]
+
+            for i in greedy_routes:
+
+                fitness = solution_picker.calculate_fitness(i)
+                self.population.append({"route": i, "fitness": int(fitness)})
+            
+        while len(self.population) < individuals:
+            
+            route = solution_picker.single_rand_solution()
+            fitness = solution_picker.calculate_fitness(route)
+
+            if not any(x["route"] == route for x in self.population):
+
+                self.population.append({"route": route, "fitness": int(fitness)})
+
+        return self.population
+    
+    def info(self):
+        
+        if not self.population:
+            print("Population is empty.")
+            return
+
+        fitness_values = [x["fitness"] for x in self.population]
+
+        min_dist = np.argmin(fitness_values)   # smaller distance is better
+        max_dist = np.argmax(fitness_values)
+
+        print("Population Information:")
+        print("-----------------------")
+        print(f"Size of population: {len(self.population)}")
+        print(f"Best fitness (shortest distance): {fitness_values[min_dist]}")
+        print(f"Best route: {self.population[min_dist]['route']}")
+        print(f"Median fitness: {np.median(fitness_values)}")
+        print(f"Worst fitness (longest distance): {fitness_values[max_dist]}")
+        print(f"Average fitness: {np.mean(fitness_values):.2f}")
+        
+
+
 if __name__ == "__main__":
 
     pd.set_option('display.max_rows', None)
@@ -268,11 +327,8 @@ if __name__ == "__main__":
     data.city_dataframe()
     
     # print(data.city_data)
-
     # The First Task: Parse and convert the data into a DataFrame and test it.
     # test_parsing(data)
-
-    
 
     # ------------------------TASK 2-------------------------------------
 
@@ -310,4 +366,13 @@ if __name__ == "__main__":
         print(f"Random and Greedy are equal. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
         print(f"Routes: Random - {best_random_route}, Greedy - {best_greedy_route}")
     
-    # ------------------------TASK 2-------------------------------------
+    # ------------------------TASK 2-------------------------------------   
+
+    # ------------------------TASK 3-------------------------------------   
+    population = Population(data)
+
+    new_pop = population.create_population(4,2)
+    print('-------------')
+    print(new_pop)
+    print('-------------')
+    print(population.info())
