@@ -2,6 +2,7 @@ import pandas as pd
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 class City:
 
@@ -313,7 +314,28 @@ class Population:
         print(f"Median fitness: {np.median(fitness_values)}")
         print(f"Worst fitness (longest distance): {fitness_values[max_dist]}")
         print(f"Average fitness: {np.mean(fitness_values):.2f}")
+    
+    def tournament_selection(self,tournament_size,winner_gen,elite_count):
+
+        winners = []
+
+        sorted_pop = sorted(self.population, key=lambda x: x['fitness'])
+
+        elites = sorted_pop[:elite_count]
+
+        winners = elites.copy()
+
+        for _ in range(winner_gen):
+            
+            random_routes = [random.choice(self.population) for _ in range(tournament_size)]
+            
+            winner = min(random_routes, key=lambda x: x["fitness"])
+
+            winners.append(winner)
+            
+        return winners
         
+
 
 
 if __name__ == "__main__":
@@ -322,7 +344,7 @@ if __name__ == "__main__":
     file_b11 = 'berlin11_modified.tsp'
     file_b52 = 'berlin52.tsp'
     
-    data = Parser(file_path = file_b52)
+    data = Parser(file_path = file_b11)
     dataset_info = data.dataset_info
     data.city_dataframe()
     
@@ -371,8 +393,12 @@ if __name__ == "__main__":
     # ------------------------TASK 3-------------------------------------   
     population = Population(data)
 
-    new_pop = population.create_population(4,2)
+    new_pop = population.create_population(individuals=50,greedies=2)
     print('-------------')
     print(new_pop)
     print('-------------')
     print(population.info())
+    a = population.tournament_selection(tournament_size=2,winner_gen=50,elite_count=5)
+    
+    print(a)
+    
