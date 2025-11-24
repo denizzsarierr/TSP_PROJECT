@@ -264,6 +264,7 @@ class Population:
     def __init__(self,data):
         self.data = data
         self.population = []
+        self.winners = []
 
     def create_population(self,individuals,greedies = 0):
         
@@ -319,13 +320,13 @@ class Population:
 
 
         # Elitisism
-        winners = []
+        
 
         sorted_pop = sorted(self.population, key=lambda x: x['fitness'])
 
         elites = sorted_pop[:elite_count]
 
-        winners = elites.copy()
+        self.winners = elites.copy()
 
 
         # -----Tournament Selection-----
@@ -335,7 +336,7 @@ class Population:
             
             winner = min(random_routes, key=lambda x: x["fitness"])
 
-            winners.append(winner)
+            self.winners.append(winner)
         
 
 
@@ -358,7 +359,7 @@ class Population:
             probability = weight / total_w
             probabilities.append(probability)
 
-        for _ in range(len(self.population) - len(winners)):
+        for _ in range(len(self.population) - len(self.winners)):
 
             rand = random.random()
 
@@ -369,14 +370,43 @@ class Population:
                 c += prob
 
                 if rand <= c:
-                    winners.append(ind)
+                    self.winners.append(ind)
                     break
 
 
 
-        return winners
-        
+        return self.winners
 
+
+    def crossover(self,pairs_count = 0):
+        
+        fitness_cal = Solution(self.data)
+
+        crossed_gen = []
+
+        pairs = [(random.choice(self.winners), random.choice(self.winners)) for _ in range(pairs_count)]
+        for parent1,parent2 in pairs:
+            
+            r_length = len(parent1["route"])
+            start,end = sorted(random.sample(range(r_length), 2))
+            
+            crossed_child = [None] * r_length
+
+            crossed_child[start:end + 1] = parent1["route"][start:end + 1]
+            
+            index = (end + 1) % r_length
+            for c in parent2["route"]:
+                if c not in crossed_child:
+                    crossed_child[index] = c
+                    index = (index + 1) % r_length
+
+
+            crossed_gen.append({"route" : crossed_child, "fitness" : int(fitness_cal.calculate_fitness(crossed_child))})
+            
+            
+            
+        return crossed_gen
+        
 
 
 if __name__ == "__main__":
@@ -385,7 +415,7 @@ if __name__ == "__main__":
     file_b11 = 'berlin11_modified.tsp'
     file_b52 = 'berlin52.tsp'
     
-    data = Parser(file_path = file_b11)
+    data = Parser(file_path = file_b52)
     dataset_info = data.dataset_info
     data.city_dataframe()
     
@@ -440,5 +470,12 @@ if __name__ == "__main__":
     print('-------------')
     print(population.info())
     a = population.selections_combined(tournament_size=2,tournament_count=20,elite_count=3)
-    print(a)
+    #print(a)
+    b = population.crossover(100)
+    
+    min_individual = min(b, key=lambda x: x['fitness'])
+    min_fitness = min_individual['fitness']
+    print("-------")
+    print(min_fitness)
+    
     
