@@ -315,8 +315,10 @@ class Population:
         print(f"Worst fitness (longest distance): {fitness_values[max_dist]}")
         print(f"Average fitness: {np.mean(fitness_values):.2f}")
     
-    def tournament_selection(self,tournament_size,winner_gen,elite_count):
+    def selections_combined(self,tournament_size,tournament_count,elite_count):
 
+
+        # Elitisism
         winners = []
 
         sorted_pop = sorted(self.population, key=lambda x: x['fitness'])
@@ -325,14 +327,53 @@ class Population:
 
         winners = elites.copy()
 
-        for _ in range(winner_gen):
+
+        # -----Tournament Selection-----
+        for _ in range(tournament_count):
             
             random_routes = [random.choice(self.population) for _ in range(tournament_size)]
             
             winner = min(random_routes, key=lambda x: x["fitness"])
 
             winners.append(winner)
-            
+        
+
+
+        # -----Roulette Selection-----
+        weights = []
+
+        for ind in self.population:
+
+            weight = 1 / ind["fitness"]
+            weights.append(weight)
+
+        # Total weight
+        total_w = sum(weights)    
+        
+        
+        # Probabilities 
+        probabilities = []
+        for weight in weights:
+
+            probability = weight / total_w
+            probabilities.append(probability)
+
+        for _ in range(len(self.population) - len(winners)):
+
+            rand = random.random()
+
+            c = 0
+
+            for ind,prob in zip(self.population,probabilities):
+
+                c += prob
+
+                if rand <= c:
+                    winners.append(ind)
+                    break
+
+
+
         return winners
         
 
@@ -389,7 +430,7 @@ if __name__ == "__main__":
         print(f"Routes: Random - {best_random_route}, Greedy - {best_greedy_route}")
     
     # ------------------------TASK 2-------------------------------------   
-
+ 
     # ------------------------TASK 3-------------------------------------   
     population = Population(data)
 
@@ -398,7 +439,6 @@ if __name__ == "__main__":
     print(new_pop)
     print('-------------')
     print(population.info())
-    a = population.tournament_selection(tournament_size=2,winner_gen=50,elite_count=5)
-    
+    a = population.selections_combined(tournament_size=2,tournament_count=20,elite_count=3)
     print(a)
     
