@@ -34,6 +34,7 @@ class Parser:
         self.distance_df = []
         self._convert_frame()
         self.solution = []
+        self.dist_matrix = None
         # Call the parsing and converting function when the object is created.
 
     def _parse_date(self):
@@ -93,6 +94,18 @@ class Parser:
         self.distance_df = pd.DataFrame(temp_distances,columns=["FCID","SCID","Distance"])
         return self.distance_df
     
+    def build_distance_matrix(self):
+        n = len(self.city_data)
+        self.dist_matrix = np.zeros((n+1, n+1))
+
+        for _, row in self.distance_df.iterrows():
+            a = int(row["FCID"])
+            b = int(row["SCID"])
+            d = float(row["Distance"])
+            self.dist_matrix[a][b] = d
+            self.dist_matrix[b][a] = d
+
+
 class Solution:
     
     def __init__(self,data):
@@ -144,14 +157,14 @@ class Solution:
                 current = solution[i]
                 next = solution[i + 1]
 
-
-            distance = distances_df.loc[((distances_df["FCID"] == current) & (distances_df["SCID"] == next)) |
-                                     ((distances_df["FCID"] == next) & (distances_df["SCID"] == current)),
-                                       "Distance" ].values[0]
-
+            # CHANGED CHANGED
+            # distance = distances_df.loc[((distances_df["FCID"] == current) & (distances_df["SCID"] == next)) |
+            #                          ((distances_df["FCID"] == next) & (distances_df["SCID"] == current)),
+            #                            "Distance" ].values[0]
+            distance = self.data.dist_matrix[current][next]
             total_distance += distance
 
-        self.info(solution=solution)
+        #self.info(solution=solution)
         
         return total_distance
 
@@ -247,15 +260,15 @@ class Greedy:
             dist,route = self.greedy_solution(i.id)
             results[i.id] = (int(dist),route)
             
-            print(f"\nStarting city: {i.id}")
-            print(self.info(route))
-            print(f"Total distance: {int(dist)}")
+            #print(f"\nStarting city: {i.id}")
+            #print(self.info(route))
+            #print(f"Total distance: {int(dist)}")
 
-        best_start_point, (best_distance, best_route) = min(results.items(),key = lambda x : x[1][0]) 
+        #best_start_point, (best_distance, best_route) = min(results.items(),key = lambda x : x[1][0]) 
 
-        print(f"\nBest Starting Point: {best_start_point}")
-        print(self.info(best_route))
-        print(f"Total distance: {int(best_distance)}")
+        #print(f"\nBest Starting Point: {best_start_point}")
+        #print(self.info(best_route))
+        #print(f"Total distance: {int(best_distance)}")
 
         return results
 
@@ -265,8 +278,12 @@ class Population:
         self.data = data
         self.population = []
         self.winners = []
+        self.fitness_cal = Solution(self.data)
+        self.best_individual = None
 
     def create_population(self,individuals,greedies = 0):
+        
+        self.population = []
         
         solution_picker = Solution(self.data)
 
@@ -317,17 +334,13 @@ class Population:
         print(f"Average fitness: {np.mean(fitness_values):.2f}")
     
     def selections_combined(self,tournament_size,tournament_count,elite_count):
-
-
-        # Elitisism
         
-
+        # Elitisism
         sorted_pop = sorted(self.population, key=lambda x: x['fitness'])
 
         elites = sorted_pop[:elite_count]
 
         self.winners = elites.copy()
-
 
         # -----Tournament Selection-----
         for _ in range(tournament_count):
@@ -338,75 +351,143 @@ class Population:
 
             self.winners.append(winner)
         
-
-
-        # -----Roulette Selection-----
-        weights = []
-
-        for ind in self.population:
-
-            weight = 1 / ind["fitness"]
-            weights.append(weight)
-
-        # Total weight
-        total_w = sum(weights)    
-        
-        
-        # Probabilities 
-        probabilities = []
-        for weight in weights:
-
-            probability = weight / total_w
-            probabilities.append(probability)
-
-        for _ in range(len(self.population) - len(self.winners)):
-
-            rand = random.random()
-
-            c = 0
-
-            for ind,prob in zip(self.population,probabilities):
-
-                c += prob
-
-                if rand <= c:
-                    self.winners.append(ind)
-                    break
-
-
-
         return self.winners
+    def pmx_crossover(self, parent1, parent2):
+        size = len(parent1)
+        child = [None]*size
+        start, end = sorted(random.sample(range(size), 2))
 
+        # Copy the segment from parent1
+        child[start:end+1] = parent1[start:end+1]
 
+        # Fill remaining positions using mapping
+        for i in range(start, end+1):
+            if parent2[i] not in child:
+                val = parent2[i]
+                idx = i
+                while child[idx] is not None:
+                    idx = parent2.index(parent1[idx])
+                child[idx] = val
+
+        # Fill the rest of the positions
+        for i in range(size):
+            if child[i] is None:
+                child[i] = parent2[i]
+
+        return child
     def crossover(self,pairs_count = 0):
         
-        fitness_cal = Solution(self.data)
-
         crossed_gen = []
 
-        pairs = [(random.choice(self.winners), random.choice(self.winners)) for _ in range(pairs_count)]
+        pairs = [tuple(random.sample(self.winners, 2)) for _ in range(pairs_count)]
         for parent1,parent2 in pairs:
             
-            r_length = len(parent1["route"])
-            start,end = sorted(random.sample(range(r_length), 2))
+            # r_length = len(parent1["route"])
+            # start,end = sorted(random.sample(range(r_length), 2))
             
-            crossed_child = [None] * r_length
+            # crossed_child = [None] * r_length
 
-            crossed_child[start:end + 1] = parent1["route"][start:end + 1]
+            # crossed_child[start:end + 1] = parent1["route"][start:end + 1]
             
-            index = (end + 1) % r_length
-            for c in parent2["route"]:
-                if c not in crossed_child:
-                    crossed_child[index] = c
-                    index = (index + 1) % r_length
+            # index = (end + 1) % r_length
+            # for c in parent2["route"]:
+            #     if c not in crossed_child:
+            #         crossed_child[index] = c
+            #         index = (index + 1) % r_length
 
-
-            crossed_gen.append({"route" : crossed_child, "fitness" : int(fitness_cal.calculate_fitness(crossed_child))})
-            
-            
-            
-        return crossed_gen
+            # fitness = int(self.fitness_cal.calculate_fitness(crossed_child))
+            # crossed_gen.append({"route" : crossed_child, "fitness" : fitness})
+            child1 = self.pmx_crossover(parent1["route"], parent2["route"])
+            child2 = self.pmx_crossover(parent2["route"], parent1["route"])
+            crossed_gen.append({"route": child1, "fitness": int(self.fitness_cal.calculate_fitness(child1))})
+            crossed_gen.append({"route": child2, "fitness": int(self.fitness_cal.calculate_fitness(child2))})
+        return crossed_gen  
+    
+    def mutation(self,ind,mut_rate):
         
+        route = ind['route'][:]
+        if random.random() < mut_rate:
+            choice = random.random()
+            if choice < 0.33:
+                # Swap mutation
+                i, j = random.sample(range(len(route)), 2)
+                route[i], route[j] = route[j], route[i]
+            elif choice < 0.66:
+                # Inversion mutation
+                i, j = sorted(random.sample(range(len(route)), 2))
+                route[i:j+1] = route[i:j+1][::-1]
+            else:
+                # Scramble mutation
+                i, j = sorted(random.sample(range(len(route)), 2))
+                segment = route[i:j+1]
+                random.shuffle(segment)
+                route[i:j+1] = segment
+
+        # rand_number = random.random()
+
+        # if rand_number < mut_rate:
+
+        #     i = random.randint(0,len(route) - 1)
+        #     y = random.randint(0,len(route) - 1)
+
+        #     while y == i:
+        #         y = random.randint(0,len(route) - 1)
+                
+        #     temp_route = route[i:y + 1]
+
+        #     reverse_temp_route = temp_route[::-1]
+
+        #     route[i:y + 1] = reverse_temp_route
+        
+
+        fitness = int(self.fitness_cal.calculate_fitness(route))
+        return {"route": route, "fitness": fitness}
+    
+    def create_epoch(self, tournament_size, tournament_count, elite_count, mut_rate, pairs_count):
+
+        self.selections_combined(tournament_size=tournament_size,
+                                 tournament_count=tournament_count,
+                                 elite_count=elite_count)
+        
+        crossed_gen = self.crossover(pairs_count=pairs_count)
+
+        mutated_gen = []
+
+        for i in crossed_gen:
+
+            mutated = self.mutation(ind = i, mut_rate=mut_rate)
+            mutated_gen.append(mutated)
+        
+        sorted_old = sorted(self.population, key=lambda x: x['fitness'])
+        elites = sorted_old[:elite_count]
+        
+        new_population = elites + mutated_gen
+
+
+        # NEW PART NEW PART NEW PART
+        num_random = max(1, int(0.1 * len(self.population)))  # 10% of population
+        for _ in range(num_random):
+            rand_sol = self.fitness_cal.single_rand_solution()
+            rand_fitness = int(self.fitness_cal.calculate_fitness(rand_sol))
+            # Replace worst individuals in the population with random ones
+            new_population[-(_+1)] = {"route": rand_sol, "fitness": rand_fitness}
+
+
+
+        while len(new_population) < len(self.population):
+            rand_sol = self.fitness_cal.single_rand_solution()
+            new_population.append({
+                "route": rand_sol,
+                "fitness": int(self.fitness_cal.calculate_fitness(rand_sol))
+            })
+
+        self.population = new_population
+
+        current_best = min(self.population, key=lambda x: x['fitness'])
+        if self.best_individual is None or current_best['fitness'] < self.best_individual['fitness']:
+            self.best_individual = current_best.copy()
+
+        return self.best_individual
 
 
 if __name__ == "__main__":
@@ -414,68 +495,56 @@ if __name__ == "__main__":
     pd.set_option('display.max_rows', None)
     file_b11 = 'berlin11_modified.tsp'
     file_b52 = 'berlin52.tsp'
+    file_kroA = 'kroA100.tsp'
     
-    data = Parser(file_path = file_b52)
+    data = Parser(file_path = file_kroA)
     dataset_info = data.dataset_info
     data.city_dataframe()
-    
-    # print(data.city_data)
-    # The First Task: Parse and convert the data into a DataFrame and test it.
-    # test_parsing(data)
+    data.build_distance_matrix()
 
-    # ------------------------TASK 2-------------------------------------
-
-    solution1 = Solution(data)
-    solution_list = solution1.rand_solution()
-
-    random_results = []
-
-    for i in solution_list:
-        
-        
-        total = solution1.calculate_fitness(i)
-        random_results.append((i,int(total)))
-        print(solution1.info(i), "Total distance:", total)
-        #solution1.plot_solution(i)
-
-    best_random_route , best_random_distance = min(random_results, key=lambda x: x[1]) 
-
-    greed = Greedy(data=data)
-    greedy_results = greed.greedy_for_each()
-    
-    best_greedy_distance = min(greedy_results.values(), key=lambda x: x[0])[0]
-    best_greedy_route = min(greedy_results.values(), key=lambda x: x[0])[1]
-    
-    if best_random_distance < best_greedy_distance:
-        
-        print(f"Random solution is better than greedy. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
-        print(f"Route: {best_random_route}")
-
-    elif best_random_distance > best_greedy_distance:
-
-        print(f"Greedy solution is better than random. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
-        print(f"Route: {best_greedy_route}")
-    else:
-        print(f"Random and Greedy are equal. Random: {best_random_distance}, Greedy: {best_greedy_distance}")
-        print(f"Routes: Random - {best_random_route}, Greedy - {best_greedy_route}")
-    
-    # ------------------------TASK 2-------------------------------------   
- 
-    # ------------------------TASK 3-------------------------------------   
     population = Population(data)
+    
+    # ------------------- GA PARAMETERS -------------------
+    num_epochs = 1000      
+    tournament_size = 5       
+    tournament_count = 15     
+    elite_count = 1           
+    mutation_rate = 0.15     
+    population_size = 150
+    #pairs_count = (population_size - elite_count) // 2 
+    pairs_count = population_size
+    greedies = 20
 
-    new_pop = population.create_population(individuals=50,greedies=2)
-    print('-------------')
-    print(new_pop)
-    print('-------------')
-    print(population.info())
-    a = population.selections_combined(tournament_size=2,tournament_count=20,elite_count=3)
-    #print(a)
-    b = population.crossover(100)
+    # Create initial population
+    population.create_population(individuals=population_size, greedies=greedies)
+
+    # Track best fitness per epoch
+    best_fitness_list = []
+
+    for epoch in range(num_epochs):
+        best_individual = population.create_epoch(
+            tournament_size=tournament_size,
+            tournament_count=tournament_count,
+            elite_count=elite_count,
+            mut_rate=mutation_rate,
+            pairs_count=pairs_count
+        )
+        
+        best_fitness_list.append(best_individual['fitness'])
     
-    min_individual = min(b, key=lambda x: x['fitness'])
-    min_fitness = min_individual['fitness']
-    print("-------")
-    print(min_fitness)
+        if (epoch + 1) % 10 == 0 or epoch == 0:
+            print(f"Epoch {epoch+1}: Best distance so far = {best_individual['fitness']}")
     
-    
+    # Final best solution
+    print("\n=== FINAL BEST SOLUTION ===")
+    print(f"Best distance: {population.best_individual['fitness']}")
+    print(f"Best route: {population.best_individual['route']}")
+
+    # Plot progress over epochs
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, num_epochs+1), best_fitness_list, marker='o', linestyle='-')
+    plt.title("Genetic Algorithm Progress")
+    plt.xlabel("Epoch")
+    plt.ylabel("Best Fitness (Distance)")
+    plt.grid(True)
+    plt.show()
