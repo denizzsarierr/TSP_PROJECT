@@ -497,7 +497,7 @@ if __name__ == "__main__":
     file_b52 = 'berlin52.tsp'
     file_kroA = 'kroA100.tsp'
     
-    data = Parser(file_path = file_kroA)
+    data = Parser(file_path = file_b52)
     dataset_info = data.dataset_info
     data.city_dataframe()
     data.build_distance_matrix()
