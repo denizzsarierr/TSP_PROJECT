@@ -1,0 +1,3 @@
+pandas==3.0.0       # Latest stable Pandas release on PyPI as of early 2026 :contentReference[oaicite:0]{index=0}
+numpy==2.4.0        # Latest NumPy release (supporting Python 3.11–3.14) :contentReference[oaicite:1]{index=1}
+matplotlib==3.10.8  # Latest Matplotlib release on PyPI :contentReference[oaicite:2]{index=2}
