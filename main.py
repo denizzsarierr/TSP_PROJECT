@@ -543,6 +543,7 @@ if __name__ == "__main__":
     else:
         plt.title(f"Best TSP Solution (Distance={global_best_fitness})")
 
+    
     plt.xlabel("X Coordinate")
     plt.ylabel("Y Coordinate")
     plt.legend()
