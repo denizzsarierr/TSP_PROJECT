@@ -6,36 +6,34 @@ At this stage, the project implements **data storage, parsing, and basic algorit
 
 ## Objectives
 
-- Understand the data structure and representation of the **Traveling Salesman Problem (TSP)**.
-- Use **OOP design** to model cities, coordinates, and distances.
-- Implement **robust data parsing** from `.tsp` files.
-- Calculate distances between cities and store them in a **DataFrame** for efficient access.
-- Implement **random solutions** and calculate their **fitness** (total travel distance).
-- Implement a **Greedy algorithm** as a basic heuristic for TSP solutions.
-- Visualize results and routes (optional, using `matplotlib`).
+- Model TSP using **OOP** with cities, coordinates, and distances.
+- Parse `.tsp` files and store city data efficiently.
+- Calculate and store **pairwise distances** in a DataFrame and distance matrix.
+- Generate **random solutions** and compute **fitness** (total tour distance).
+- Implement a **Greedy nearest-neighbor heuristic**.
+- Implement a **Genetic Algorithm (GA)** with elitism, tournament selection, crossover, and mutations.
+- Track best solutions and visualize results with **matplotlib**.
 
 ---
 
 ## Current Implementation
 
-At this stage, the project includes:
+The project includes:
 
-- **Class-based design** for TSP problem components.
-- **Parsing logic** that reads city information from `.tsp` files and constructs `City` objects.
-- **Distance calculation** between every pair of cities, stored in a **Pandas DataFrame**.
-- **Random solution generator** to create candidate tours.
-- **Fitness function** to calculate the total distance of a tour.
-- **Greedy algorithm** to generate tours starting from any city and choosing the nearest unvisited city iteratively.
-- Optional **matplotlib visualization** for plotting routes.
+- **OOP design** for TSP components.
+- Parsing `.tsp` files and creating `City` objects.
+- Pairwise distance calculation stored in a **DataFrame** and a **distance matrix**.
+- **Random solution generation** and fitness evaluation (total distance).
+- **Greedy nearest-neighbor heuristic**.
+- **Genetic Algorithm (GA)** with elitism, tournament selection, PMX crossover, multiple mutation strategies, and random immigrant injection.
+- GA evolution with best solution tracking and optional **matplotlib** visualization.
 
 ### Implemented Classes
 
-| Class     | Description                                                                                       |
-| --------- | ------------------------------------------------------------------------------------------------- |
-| `City`    | Represents a city with attributes `id`, `x_coord`, `y_coord`, and distance list to other cities.  |
-| `Parser`  | Reads `.tsp` files, parses city coordinates, calculates pairwise distances, and returns a DataFrame. |
-| `Solution`| Stores candidate TSP solutions, calculates fitness, and provides tour information.                |
-| `Greedy`  | Implements a **nearest-neighbor heuristic** for TSP, with methods to run greedy tours from any starting city and find the best starting point. |
-
----
-
+| Class        | Description                                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `City`       | Represents a city with attributes `id`, `x_coord`, `y_coord`, and distance list to other cities.                                                 |
+| `Parser`     | Reads `.tsp` files, parses city coordinates, calculates pairwise distances, builds distance matrix, and returns a DataFrame.                     |
+| `Solution`   | Stores candidate TSP solutions, calculates fitness, generates random solutions, and provides tour information.                                   |
+| `Greedy`     | Implements a **nearest-neighbor heuristic** for TSP, with methods to run greedy tours from any starting city and find the best starting point.   |
+| `Population` | Implements a **Genetic Algorithm population**, manages selection, crossover, mutation, epoch evolution, and tracks the best individual solution. |
