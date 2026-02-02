@@ -4,6 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
+SEED = 41
+random.seed(SEED)
+np.random.seed(SEED)
+
 class City:
 
     def __init__(self,id,x_coord,y_coord):
@@ -172,26 +176,6 @@ class Solution:
         
         return "Route:" + " -> ".join(str(c) for c in solution)
 
-    # AI GENERATED MATPLOTLIB
-    # def plot_solution(self, solution):
-    #     df = pd.DataFrame([{"id": c.id, "x": c.x_coord, "y": c.y_coord} for c in self.data.city_data])
-
-    #     # Reorder by solution order
-    #     ordered = df.set_index("id").loc[solution]
-
-    #     # Close the loop (add the first city again at the end)
-    #     ordered = pd.concat([ordered, ordered.iloc[[0]]])
-
-    #     # Plot
-    #     plt.figure(figsize=(8, 6))
-    #     plt.plot(ordered["x"], ordered["y"], marker="o", linestyle="-")
-    #     for i, row in ordered.iterrows():
-    #         plt.text(row["x"] + 10, row["y"] + 10, str(i), fontsize=9)
-    #     plt.title("TSP Route Visualization")
-    #     plt.xlabel("X Coordinate")
-    #     plt.ylabel("Y Coordinate")
-    #     plt.grid(True)
-    #     plt.show()
 
 class Greedy:
 
@@ -259,16 +243,6 @@ class Greedy:
 
             dist,route = self.greedy_solution(i.id)
             results[i.id] = (int(dist),route)
-            
-            #print(f"\nStarting city: {i.id}")
-            #print(self.info(route))
-            #print(f"Total distance: {int(dist)}")
-
-        #best_start_point, (best_distance, best_route) = min(results.items(),key = lambda x : x[1][0]) 
-
-        #print(f"\nBest Starting Point: {best_start_point}")
-        #print(self.info(best_route))
-        #print(f"Total distance: {int(best_distance)}")
 
         return results
 
@@ -357,10 +331,10 @@ class Population:
         child = [None]*size
         start, end = sorted(random.sample(range(size), 2))
 
-        # Copy the segment from parent1
+       
         child[start:end+1] = parent1[start:end+1]
 
-        # Fill remaining positions using mapping
+       
         for i in range(start, end+1):
             if parent2[i] not in child:
                 val = parent2[i]
@@ -369,7 +343,7 @@ class Population:
                     idx = parent2.index(parent1[idx])
                 child[idx] = val
 
-        # Fill the rest of the positions
+       
         for i in range(size):
             if child[i] is None:
                 child[i] = parent2[i]
@@ -379,29 +353,16 @@ class Population:
         
         crossed_gen = []
 
-        pairs = [tuple(random.sample(self.winners, 2)) for _ in range(pairs_count)]
-        for parent1,parent2 in pairs:
-            
-            # r_length = len(parent1["route"])
-            # start,end = sorted(random.sample(range(r_length), 2))
-            
-            # crossed_child = [None] * r_length
-
-            # crossed_child[start:end + 1] = parent1["route"][start:end + 1]
-            
-            # index = (end + 1) % r_length
-            # for c in parent2["route"]:
-            #     if c not in crossed_child:
-            #         crossed_child[index] = c
-            #         index = (index + 1) % r_length
-
-            # fitness = int(self.fitness_cal.calculate_fitness(crossed_child))
-            # crossed_gen.append({"route" : crossed_child, "fitness" : fitness})
+        for _ in range(pairs_count):
+            parent1, parent2 = random.sample(self.winners, 2)  # picks 2 distinct parents
             child1 = self.pmx_crossover(parent1["route"], parent2["route"])
             child2 = self.pmx_crossover(parent2["route"], parent1["route"])
-            crossed_gen.append({"route": child1, "fitness": int(self.fitness_cal.calculate_fitness(child1))})
-            crossed_gen.append({"route": child2, "fitness": int(self.fitness_cal.calculate_fitness(child2))})
-        return crossed_gen  
+            crossed_gen.append({"route": child1,
+                                "fitness": int(self.fitness_cal.calculate_fitness(child1))})
+            crossed_gen.append({"route": child2,
+                                "fitness": int(self.fitness_cal.calculate_fitness(child2))})
+
+        return crossed_gen
     
     def mutation(self,ind,mut_rate):
         
@@ -422,73 +383,46 @@ class Population:
                 segment = route[i:j+1]
                 random.shuffle(segment)
                 route[i:j+1] = segment
-
-        # rand_number = random.random()
-
-        # if rand_number < mut_rate:
-
-        #     i = random.randint(0,len(route) - 1)
-        #     y = random.randint(0,len(route) - 1)
-
-        #     while y == i:
-        #         y = random.randint(0,len(route) - 1)
-                
-        #     temp_route = route[i:y + 1]
-
-        #     reverse_temp_route = temp_route[::-1]
-
-        #     route[i:y + 1] = reverse_temp_route
         
-
         fitness = int(self.fitness_cal.calculate_fitness(route))
         return {"route": route, "fitness": fitness}
     
-    def create_epoch(self, tournament_size, tournament_count, elite_count, mut_rate, pairs_count):
+    def create_epoch(self, tournament_size, tournament_count, elite_count, mut_rate):
 
         self.selections_combined(tournament_size=tournament_size,
                                  tournament_count=tournament_count,
                                  elite_count=elite_count)
+        population_size = len(self.population)
+        needed_children = population_size - elite_count  # Number of children to produce
+        pairs_count = needed_children // 2
         
         crossed_gen = self.crossover(pairs_count=pairs_count)
 
         mutated_gen = []
-
+        
         for i in crossed_gen:
 
             mutated = self.mutation(ind = i, mut_rate=mut_rate)
             mutated_gen.append(mutated)
         
+        if needed_children % 2 == 1:
+            parent = random.choice(self.winners)
+            mutated_gen.append(self.mutation(parent, mut_rate))
+
+        
+        
         sorted_old = sorted(self.population, key=lambda x: x['fitness'])
         elites = sorted_old[:elite_count]
         
-        new_population = elites + mutated_gen
-
-
-        # NEW PART NEW PART NEW PART
-        num_random = max(1, int(0.1 * len(self.population)))  # 10% of population
-        for _ in range(num_random):
-            rand_sol = self.fitness_cal.single_rand_solution()
-            rand_fitness = int(self.fitness_cal.calculate_fitness(rand_sol))
-            # Replace worst individuals in the population with random ones
-            new_population[-(_+1)] = {"route": rand_sol, "fitness": rand_fitness}
-
-
-
-        while len(new_population) < len(self.population):
-            rand_sol = self.fitness_cal.single_rand_solution()
-            new_population.append({
-                "route": rand_sol,
-                "fitness": int(self.fitness_cal.calculate_fitness(rand_sol))
-            })
-
+        new_population = elites + mutated_gen[:needed_children]
         self.population = new_population
 
-        current_best = min(self.population, key=lambda x: x['fitness'])
-        if self.best_individual is None or current_best['fitness'] < self.best_individual['fitness']:
+        # --- 8. Track global best (unchanged) ---
+        current_best = min(self.population, key=lambda x: x["fitness"])
+        if self.best_individual is None or current_best["fitness"] < self.best_individual["fitness"]:
             self.best_individual = current_best.copy()
 
         return self.best_individual
-
 
 if __name__ == "__main__":
 
@@ -496,55 +430,122 @@ if __name__ == "__main__":
     file_b11 = 'berlin11_modified.tsp'
     file_b52 = 'berlin52.tsp'
     file_kroA = 'kroA100.tsp'
-    
-    data = Parser(file_path = file_b52)
+    file_kroA150 = 'kroA150.tsp'
+    # 21886
+    data = Parser(file_path=file_b52)
     dataset_info = data.dataset_info
     data.city_dataframe()
     data.build_distance_matrix()
 
-    population = Population(data)
-    
-    # ------------------- GA PARAMETERS -------------------
-    num_epochs = 1000      
+    # ------------------- Parameter sets to test -------------------
+    parameter_sets = [
+        {"population_size": 100, "mutation_rate": 0.05, "greedies": 0},
+        {"population_size": 200, "mutation_rate": 0.15, "greedies": 20},
+        {"population_size": 500, "mutation_rate": 0.25, "greedies": 40}
+    ]
+
+    num_epochs = 500      # can reduce for testing
     tournament_size = 5       
     tournament_count = 15     
-    elite_count = 1           
-    mutation_rate = 0.15     
-    population_size = 150
-    #pairs_count = (population_size - elite_count) // 2 
-    pairs_count = population_size
-    greedies = 20
+    elite_count = 2           
 
-    # Create initial population
-    population.create_population(individuals=population_size, greedies=greedies)
+    all_experiments = []
 
-    # Track best fitness per epoch
-    best_fitness_list = []
+    # Track globally best solution across all parameter sets
+    global_best_fitness = float('inf')
+    global_best_route = []
 
-    for epoch in range(num_epochs):
-        best_individual = population.create_epoch(
-            tournament_size=tournament_size,
-            tournament_count=tournament_count,
-            elite_count=elite_count,
-            mut_rate=mutation_rate,
-            pairs_count=pairs_count
-        )
+    for params in parameter_sets:
+        population_size = params["population_size"]
+        mutation_rate = params["mutation_rate"]
+        greedies = params["greedies"]
+
+        print(f"\nRunning GA with Population={population_size}, Mutation={mutation_rate}, Greedy={greedies}")
+
+        population = Population(data)
+        population.create_population(individuals=population_size, greedies=greedies)
+
+        best_fitness_list = []
+
+        for epoch in range(num_epochs):
+            best_individual = population.create_epoch(
+                tournament_size=tournament_size,
+                tournament_count=tournament_count,
+                elite_count=elite_count,
+                mut_rate=mutation_rate,
+            )
+            best_fitness_list.append(best_individual['fitness'])
+
+        print(f"Best distance: {population.best_individual['fitness']}")
+
         
-        best_fitness_list.append(best_individual['fitness'])
-    
-        if (epoch + 1) % 10 == 0 or epoch == 0:
-            print(f"Epoch {epoch+1}: Best distance so far = {best_individual['fitness']}")
-    
-    # Final best solution
-    print("\n=== FINAL BEST SOLUTION ===")
-    print(f"Best distance: {population.best_individual['fitness']}")
-    print(f"Best route: {population.best_individual['route']}")
+        if population.best_individual['fitness'] < global_best_fitness:
+            global_best_fitness = population.best_individual['fitness']
+            global_best_route = population.best_individual['route']
 
-    # Plot progress over epochs
-    plt.figure(figsize=(10, 5))
-    plt.plot(range(1, num_epochs+1), best_fitness_list, marker='o', linestyle='-')
-    plt.title("Genetic Algorithm Progress")
+        # Store results
+        all_experiments.append({
+            "Population": population_size,
+            "Mutation": mutation_rate,
+            "Greedy": greedies,
+            "BestFitness": population.best_individual['fitness'],
+            "BestFitnessOverTime": best_fitness_list
+        })
+
+    # ------------------- Plot comparison -------------------
+    plt.figure(figsize=(10, 6))
+    for exp in all_experiments:
+        label = f"Pop={exp['Population']}, Mut={exp['Mutation']}, Greedy={exp['Greedy']}"
+        plt.plot(range(1, num_epochs+1), exp["BestFitnessOverTime"], label=label)
+
+    plt.title("GA Fitness Progression for Different Parameter Sets")
     plt.xlabel("Epoch")
     plt.ylabel("Best Fitness (Distance)")
+    plt.legend()
     plt.grid(True)
     plt.show()
+
+    # ------------------- Plot Best TSP Solution on Map with Parameters -------------------
+    x_coords = [data.city_data[city_id - 1].x_coord for city_id in global_best_route]
+    y_coords = [data.city_data[city_id - 1].y_coord for city_id in global_best_route]
+
+    # Close the loop
+    x_coords.append(x_coords[0])
+    y_coords.append(y_coords[0])
+
+    plt.figure(figsize=(10, 8))
+
+    # Plot the route
+    plt.plot(x_coords, y_coords, marker='o', linestyle='-', color='blue', linewidth=2, markersize=6)
+
+    # Highlight the starting city with a red star
+    start_city = data.city_data[global_best_route[0] - 1]
+    plt.scatter(start_city.x_coord, start_city.y_coord, color='red', s=100, marker='*', label='Start City')
+
+    # Annotate city IDs
+    for i, city_id in enumerate(global_best_route):
+        city = data.city_data[city_id - 1]
+        plt.text(city.x_coord + 1, city.y_coord + 1, str(city.id), fontsize=9)
+
+    # Find which parameter set produced this best solution
+    best_exp = None
+    for exp in all_experiments:
+        if exp['BestFitness'] == global_best_fitness:
+            best_exp = exp
+            break
+
+    # Add parameters as a title
+    if best_exp is not None:
+        plt.title(
+            f"Best TSP Solution (Distance={global_best_fitness})\n"
+            f"Population={best_exp['Population']}, Mutation={best_exp['Mutation']}, Greedy={best_exp['Greedy']}"
+        )
+    else:
+        plt.title(f"Best TSP Solution (Distance={global_best_fitness})")
+
+    plt.xlabel("X Coordinate")
+    plt.ylabel("Y Coordinate")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
